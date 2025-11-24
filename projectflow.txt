@@ -1,1 +1,15 @@
 1. Create project template by executing template.py
+2. Write the code in setup.py and pyproject.toml to import local packages
+3. Create a virtual env, activate it and install packages mentionded in requirements.txt 
+>>uv init
+>>uv add -r requirements.txt
+
+4. do pip list to check all dependancies installed correctly
+5. do uv pip install -e . to add the projectfolder as package
+
+--------------------------------------MongoDb setup-------------------------
+5.Sign up to MongoDb Atlas and create a new project by providing a name and then next next create
+6. create a cluster , by clicking create , select no service keeping other services as default, hit create deployment
+7. setup a username , password and cretae a db user.
+8. Go to network access -> ip access list -> add IP adress -> add 0.0.0.0/0 to allow access from anywhere
+9. Go to project overview->in application development-> get connection string->save connection string for later use
