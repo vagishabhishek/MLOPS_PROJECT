@@ -13,3 +13,27 @@
 7. setup a username , password and cretae a db user.
 8. Go to network access -> ip access list -> add IP adress -> add 0.0.0.0/0 to allow access from anywhere
 9. Go to project overview->in application development-> get connection string->save connection string for later use
+10. replace <password> in connection string with your own password
+11. make a jupyter notebook and test connection with mongodb using the connection string 
+--> make a project_cred.yaml , remove it from git tracking.
+--> set values for user , password ,host and cluster from connection string. Use the bwlow yaml format
+    mongo:
+        user: 
+        password: 
+        host: 
+        cluster: 
+--> load yaml and use urllib.url_parse to encode special characters in usename and password to avoid conflict in --mongodb connection string-- special characters
+
+import yaml
+from urllib.parse import quote_plus
+#quote plus is used to encode special characters in username and password, 
+#if username and password contains special characters they are escaped so that there is no contradiction
+#with ? and @ used in mongodd connection string
+
+config = yaml.safe_load(open(r"../project_cred.yaml"))
+
+user = quote_plus(config["mongo"]["user"])
+password = quote_plus(config["mongo"]["password"])
+host = config["mongo"]["host"]
+cluster = config["mongo"]["cluster"]
+
