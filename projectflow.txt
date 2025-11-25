@@ -36,4 +36,7 @@ user = quote_plus(config["mongo"]["user"])
 password = quote_plus(config["mongo"]["password"])
 host = config["mongo"]["host"]
 cluster = config["mongo"]["cluster"]
+------------------------logger-----------------
+12.write code for logger in logger->__init__.py
+13.check logger code from demo.py
 

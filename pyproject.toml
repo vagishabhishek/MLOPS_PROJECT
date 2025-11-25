@@ -1,5 +1,5 @@
 [project]
-name = "mlops-project"
+name = "mlops_project"
 version = "0.1.0"
 description = "Production-grade MLOps project"
 readme = "README.md"
@@ -72,6 +72,7 @@ dev = [
     "pure-eval>=0.2",
     "pygments>=2.19",
     "pyparsing>=3.2",
+    "pytest>=9.0.1",
     "pytz>=2025.1",
     "pyzmq>=27.1",
     "s3transfer>=0.15",

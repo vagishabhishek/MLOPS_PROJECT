@@ -1,5 +1,11 @@
+
+from src.logger import get_logger
+from demo import demo_logger
+
 def main():
-    print("Hello from mlops-project!")
+    logger = get_logger("Main Logger")
+    logger.debug("Hello from mlops-project!")
+    demo_logger()
 
 
 if __name__ == "__main__":
