@@ -1,49 +1,61 @@
+# logger.py
 import logging
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from datetime import datetime
-from from_root import from_root
+
+# from_root import
+try:
+    from from_root import from_root
+except ImportError:
+    from_root = lambda: Path(__file__).parent  # fallback to script folder
 
 # ---------------------- CONFIG ----------------------
-LOG_DIR = "logs"
-LOG_FILE = f'{datetime.now().strftime("%Y-%m-%d %H-%M-%S")}.log'
-MAX_LOG_SIZE = 5 * 1024 * 1024   # 5 MB
+LOG_DIR_NAME = "logs"
+MAX_LOG_SIZE = 5 * 1024 * 1024  # 5 MB
 BACKUP_COUNT = 3
 
 # ---------------------- PATH SETUP ----------------------
-log_dir = Path(from_root()) / LOG_DIR
-log_dir.mkdir(parents=True, exist_ok=True)
+try:
+    root_path = Path(from_root())
+except Exception:
+    root_path = Path(__file__).parent
 
-log_file = log_dir / LOG_FILE
+LOG_DIR = root_path / LOG_DIR_NAME
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Timestamped log file
+LOG_FILE = LOG_DIR / f"{datetime.now().strftime('%Y-%m-%d %H-%M-%S')}.log"
 
 # ---------------------- ROOT LOGGER SETUP ----------------------
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
+root_logger.propagate = False #avoid duplicate records by parent and child loggers
 
 if not root_logger.handlers:
-
     formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | "
-        "%(filename)s:%(lineno)d | %(message)s"
+        "%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # File Handler
-    file_handler = RotatingFileHandler(
-        filename=log_file,
+    fh = RotatingFileHandler(
+        filename=LOG_FILE,
         maxBytes=MAX_LOG_SIZE,
-        backupCount=BACKUP_COUNT
+        backupCount=BACKUP_COUNT,
+        encoding="utf-8"
     )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(logging.DEBUG)
-    root_logger.addHandler(file_handler)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    root_logger.addHandler(fh)
 
     # Console Handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG)
-    root_logger.addHandler(console_handler)
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    root_logger.addHandler(ch)
 
 # ---------------------- PUBLIC API ----------------------
-def get_logger(name: str = None):
-    """Return logger with correct name and inherited handlers."""
-    return logging.getLogger(name)
+def get_logger(name: str = __name__) -> logging.Logger:
+    """Return a logger with the given name; defaults to root logger."""
+    return logging.getLogger(name) if name else root_logger

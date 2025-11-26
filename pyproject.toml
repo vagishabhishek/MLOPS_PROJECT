@@ -90,9 +90,19 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = { "" = "src" }   # tells setuptools that root code is in src/
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]  # optional linting config
+line-length = 120
+select = ["E", "F"]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = "-ra -q"

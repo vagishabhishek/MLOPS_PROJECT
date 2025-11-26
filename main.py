@@ -1,5 +1,5 @@
 
-from src.logger import get_logger
+from mlops_project.logger import get_logger
 from demo import demo_logger
 
 def main():
