@@ -40,5 +40,7 @@ cluster = config["mongo"]["cluster"]
 12.write code for logger in logger->__init__.py
 13.check logger code from demo.py
 14.add tests for logger in ./tests/logger/test_logger.py
-15. 
+15. run the tests and check if all tests pass
+---------------------ML Experiments------------------------------------------------
+16. make a jupyter notebook exp notebook 
 
