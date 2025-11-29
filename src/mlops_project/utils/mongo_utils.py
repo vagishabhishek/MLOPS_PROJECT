@@ -1,79 +1,83 @@
+"""
+MongoDB connection URI builder.
+
+Environment variables required:
+    - MONGO_USER
+    - MONGO_PASSWORD
+    - MONGO_HOST
+    - CLUSTER
+
+These should be provided from:
+    - Real production environment variables
+    - Loaded automatically by logger (if AUTO_LOAD_DOTENV=1)
+    - Or set manually during unit tests
+
+This module does NOT load .env files. It simply reads environment variables.
+"""
+
 import os
-import sys
-from pathlib import Path
-from dotenv import load_dotenv
-from from_root import from_root
 from urllib.parse import quote_plus
 from mlops_project.logger import get_logger
-from mlops_project.exception import MyExcption
+from mlops_project.exception import MyException
+import sys
+
+# ---------------------- LOGGER ----------------------
+logger = get_logger("MongoURI")
 
 
-def create_mongo_uri():
+# ---------------------- FUNCTION ----------------------
+def create_mongo_uri() -> str:
     """
-    Read MongoDB credentials from .env/mongo_cred.env and create a connection URI.
+    Create a MongoDB connection URI using environment variables.
 
-    Expects the following variables in mongo_cred.env:
-      - MONGO_USER
-      - MONGO_PASSWORD
-      - MONGO_HOST
-      - CLUSTER
+    Behavior:
+        - Reads required environment variables.
+        - Prompts an error if any required variables are missing.
+        - Encodes credentials safely for MongoDB URI.
+
+    Required environment variables:
+        - MONGO_USER
+        - MONGO_PASSWORD
+        - MONGO_HOST
+        - CLUSTER
 
     Returns:
-        str: MongoDB connection URI
+        str: MongoDB connection URI in the form:
+             mongodb+srv://<user>:<password>@<host>/?appName=<cluster>
 
     Raises:
-        MyExcption: if directory, file, or env variables are missing
+        MyException: If any required environment variables are missing or other errors occur.
     """
-    logger = get_logger("MongoDB URL Creation")
-
     try:
-        PROJECT_ROOT = Path(from_root())
-        logger.info("PROJECT_ROOT set.")
+        # ---------------------- CHECK ENVIRONMENT VARIABLES ----------------------
+        required_vars = ["MONGO_USER", "MONGO_PASSWORD", "MONGO_HOST", "CLUSTER"]
+        missing_vars = [v for v in required_vars if os.getenv(v) is None]
 
-        ENV_PATH = PROJECT_ROOT / ".env"
-        MONGO_CRED_PATH = ENV_PATH / "mongo_cred.env"
-
-        # Check if directory exists
-        if not ENV_PATH.exists():
-            raise FileNotFoundError(f".env directory not found at: {ENV_PATH}")
-
-        # Check if file exists
-        if not MONGO_CRED_PATH.exists():
-            raise FileNotFoundError(f"mongo_cred.env not found at: {MONGO_CRED_PATH}")
-
-        # Load environment variables
-        load_dotenv(MONGO_CRED_PATH)
-        logger.info("Environment variables loaded from mongo_cred.env")
-
-        # Get raw variables
-        MONGO_USER_RAW = os.getenv("MONGO_USER")
-        MONGO_PASSWORD_RAW = os.getenv("MONGO_PASSWORD")
-        MONGO_HOST = os.getenv("MONGO_HOST")
-        MONGO_CLUSTER = os.getenv("CLUSTER")
-
-        # Validate missing fields
-        if not all([MONGO_USER_RAW, MONGO_PASSWORD_RAW, MONGO_HOST, MONGO_CLUSTER]):
-            raise ValueError(
-                "Some or all env fields missing. SET MONGO_USER, MONGO_PASSWORD, MONGO_HOST, CLUSTER"
+        if missing_vars:
+            msg = (
+                f"Missing required environment variables: {missing_vars}\n"
+                "Please provide them in the system environment or in a .env file "
+                "with the following format:\n"
+                "MONGO_USER=your_user\n"
+                "MONGO_PASSWORD=your_password\n"
+                "MONGO_HOST=your_cluster_host\n"
+                "CLUSTER=your_cluster_name"
             )
+            logger.error(msg)
+            # Raise MyException with error detail
+            raise MyException(msg, sys)
 
-        # Encode credentials
-        MONGO_USER = quote_plus(MONGO_USER_RAW)
-        MONGO_PASSWORD = quote_plus(MONGO_PASSWORD_RAW)
+        # ---------------------- BUILD MONGO URI ----------------------
+        user = quote_plus(os.getenv("MONGO_USER"))
+        password = quote_plus(os.getenv("MONGO_PASSWORD"))
+        host = os.getenv("MONGO_HOST")
+        cluster = os.getenv("CLUSTER")
 
-        mongo_uri = f"mongodb+srv://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}/?appName={MONGO_CLUSTER}"
-        logger.info("MongoDB URI created successfully.")
+        mongo_uri = f"mongodb+srv://{user}:{password}@{host}/?appName={cluster}"
 
+        logger.info("MongoDB URI successfully created.")
         return mongo_uri
 
-    except FileNotFoundError as e:
-        logger.error(f"File or directory missing: {e}", exc_info=True)
-        raise MyExcption(str(e), sys)
-
-    except ValueError as e:
-        logger.error(f"Invalid or missing environment values: {e}", exc_info=True)
-        raise MyExcption(str(e), sys)
-
     except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
-        raise MyExcption(str(e), sys)
+        # Wrap all exceptions in MyException
+        raise MyException(e, sys)

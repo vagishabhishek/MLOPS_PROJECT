@@ -1,8 +1,22 @@
-# logger.py
+
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime
+
+#------------------------------------------------------------------------------
+#LOAD ENV FILES
+#------------------------------------------------------------------------------
+import os
+...
+# DEVELOPMENT ONLY: auto-load environment variables
+if os.getenv("AUTO_LOAD_DOTENV", "0") == "1":
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()  # loads .env from project root
+    except Exception:
+        pass
+#-----------------------------------------------------------------------------------
 
 # from_root import
 try:

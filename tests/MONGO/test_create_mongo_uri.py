@@ -1,116 +1,85 @@
+import os
 import pytest
-from pathlib import Path
-from mlops_project.exception import MyExcption
-import mlops_project.utils.mongo_utils as mu  # global import for all tests
+from mlops_project.utils.mongo_utils import create_mongo_uri
+from mlops_project.exception import MyException
 
-
-# Helper function to write .env file
-def write_env(path: Path, content: str):
+# ---------------------- TEST: SUCCESS ----------------------
+def test_create_mongo_uri_success(monkeypatch):
     """
-    Write content to a .env file.
-    Ensures parent directories exist before writing.
+    Test successful creation of MongoDB URI when all required environment variables are set.
+
+    Steps:
+        - Set MONGO_USER, MONGO_PASSWORD, MONGO_HOST, and CLUSTER.
+        - Call create_mongo_uri().
+        - Validate that the returned URI contains all credentials correctly.
     """
-    path.parent.mkdir(parents=True, exist_ok=True)  # create directories if missing
-    path.write_text(content)  # write the .env file
+    monkeypatch.setenv("MONGO_USER", "testuser")
+    monkeypatch.setenv("MONGO_PASSWORD", "testpass")
+    monkeypatch.setenv("MONGO_HOST", "cluster0.mongodb.net")
+    monkeypatch.setenv("CLUSTER", "TestCluster")
 
+    uri = create_mongo_uri()
+    assert uri.startswith("mongodb+srv://")
+    assert "testuser" in uri
+    assert "testpass" in uri
+    assert "cluster0.mongodb.net" in uri
+    assert "TestCluster" in uri
 
-@pytest.fixture
-def env_paths(tmp_path):
+# ---------------------- TEST: MISSING SINGLE VARIABLE ----------------------
+def test_missing_single_env_var(monkeypatch):
     """
-    Fixture to create temporary paths for testing.
-    
-    Returns a dictionary with:
-    - project_root: base temp folder
-    - env_dir: folder where .env will be placed
-    - env_file: full path to mongo_cred.env
+    Test that MyException is raised when one required environment variable is missing.
+
+    Steps:
+        - Set all required variables except CLUSTER.
+        - Call create_mongo_uri().
+        - Expect MyException with a message indicating the missing variable.
     """
-    project_root = tmp_path / "project"
-    env_dir = project_root / ".env"
-    env_file = env_dir / "mongo_cred.env"
-    return {"project_root": project_root, "env_dir": env_dir, "env_file": env_file}
+    monkeypatch.setenv("MONGO_USER", "testuser")
+    monkeypatch.setenv("MONGO_PASSWORD", "testpass")
+    monkeypatch.setenv("MONGO_HOST", "cluster0.mongodb.net")
+    monkeypatch.delenv("CLUSTER", raising=False)
 
+    with pytest.raises(MyException) as exc:
+        create_mongo_uri()
+    assert "Missing required environment variables" in str(exc.value)
 
-def test_create_mongo_uri_success(env_paths, monkeypatch):
+# ---------------------- TEST: MISSING MULTIPLE VARIABLES ----------------------
+def test_missing_multiple_env_vars(monkeypatch):
     """
-    Test successful creation of MongoDB URI.
-    Writes a complete .env file and asserts the returned URI.
+    Test that MyException is raised when multiple environment variables are missing.
+
+    Steps:
+        - Set only MONGO_USER.
+        - Leave MONGO_PASSWORD, MONGO_HOST, and CLUSTER unset.
+        - Call create_mongo_uri().
+        - Expect MyException indicating all missing variables.
     """
-    # Remove any real env vars to isolate test
-    for key in ["MONGO_USER", "MONGO_PASSWORD", "MONGO_HOST", "CLUSTER"]:
-        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("MONGO_USER", "testuser")
+    monkeypatch.delenv("MONGO_PASSWORD", raising=False)
+    monkeypatch.delenv("MONGO_HOST", raising=False)
+    monkeypatch.delenv("CLUSTER", raising=False)
 
-    # Force from_root() to use temp project folder
-    monkeypatch.setattr(
-        "mlops_project.utils.mongo_utils.from_root",
-        lambda: str(env_paths["project_root"])
-    )
+    with pytest.raises(MyException) as exc:
+        create_mongo_uri()
+    assert "Missing required environment variables" in str(exc.value)
 
-    # Write a valid test .env file
-    write_env(
-        env_paths["env_file"],
-        "MONGO_USER=testuser\nMONGO_PASSWORD=testpass\nMONGO_HOST=cluster0.mongodb.net\nCLUSTER=TestCluster\n"
-    )
-
-    # Generate URI and assert
-    uri = mu.create_mongo_uri()
-    assert uri == "mongodb+srv://testuser:testpass@cluster0.mongodb.net/?appName=TestCluster"
-
-
-def test_missing_env_directory(env_paths, monkeypatch):
+# ---------------------- TEST: SPECIAL CHARACTERS ENCODING ----------------------
+def test_mongo_credentials_encoding(monkeypatch):
     """
-    Should raise MyExcption when .env folder is missing.
-    Folder is NOT created to simulate missing directory.
+    Test that special characters in user and password are URL-encoded correctly.
+
+    Steps:
+        - Set MONGO_USER and MONGO_PASSWORD with special characters (+, @, /).
+        - Set remaining variables normally.
+        - Call create_mongo_uri().
+        - Verify that special characters are percent-encoded in the URI.
     """
-    for key in ["MONGO_USER", "MONGO_PASSWORD", "MONGO_HOST", "CLUSTER"]:
-        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("MONGO_USER", "user+name")
+    monkeypatch.setenv("MONGO_PASSWORD", "p@ss/word")
+    monkeypatch.setenv("MONGO_HOST", "cluster0.mongodb.net")
+    monkeypatch.setenv("CLUSTER", "TestCluster")
 
-    monkeypatch.setattr(
-        "mlops_project.utils.mongo_utils.from_root",
-        lambda: str(env_paths["project_root"])
-    )
-
-    with pytest.raises(MyExcption):
-        mu.create_mongo_uri()
-
-
-def test_missing_env_file(env_paths, monkeypatch):
-    """
-    Should raise MyExcption when mongo_cred.env file is missing.
-    Folder exists but file is not created.
-    """
-    for key in ["MONGO_USER", "MONGO_PASSWORD", "MONGO_HOST", "CLUSTER"]:
-        monkeypatch.delenv(key, raising=False)
-
-    # Only create folder, not file
-    env_paths["env_dir"].mkdir(parents=True, exist_ok=True)
-
-    monkeypatch.setattr(
-        "mlops_project.utils.mongo_utils.from_root",
-        lambda: str(env_paths["project_root"])
-    )
-
-    with pytest.raises(MyExcption):
-        mu.create_mongo_uri()
-
-
-def test_missing_env_fields(env_paths, monkeypatch):
-    """
-    Should raise MyExcption when required environment variables are missing.
-    Creates a .env file with missing CLUSTER variable.
-    """
-    for key in ["MONGO_USER", "MONGO_PASSWORD", "MONGO_HOST", "CLUSTER"]:
-        monkeypatch.delenv(key, raising=False)
-
-    monkeypatch.setattr(
-        "mlops_project.utils.mongo_utils.from_root",
-        lambda: str(env_paths["project_root"])
-    )
-
-    # Write incomplete env file (missing CLUSTER)
-    write_env(
-        env_paths["env_file"],
-        "MONGO_USER=testuser\nMONGO_PASSWORD=testpass\nMONGO_HOST=cluster0.mongodb.net\n"
-    )
-
-    with pytest.raises(MyExcption):
-        mu.create_mongo_uri()
+    uri = create_mongo_uri()
+    assert "user%2Bname" in uri
+    assert "p%40ss%2Fword" in uri

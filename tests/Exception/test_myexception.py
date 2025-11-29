@@ -1,5 +1,5 @@
 import sys
-from mlops_project.exception import MyExcption
+from mlops_project.exception import MyException
 import pandas as pd
 import pytest
 
@@ -7,7 +7,7 @@ def test_custom_exception1():
     try:
         1 / 0
     except Exception as e:
-        exc = MyExcption(str(e), sys)
+        exc = MyException(str(e), sys)
 
     # assertions
     msg = str(exc)
@@ -20,7 +20,7 @@ def test_custom_exception2():
         df = pd.read_csv("MyFile.csv")
     
     except Exception as e:
-        exc = MyExcption(str(e),sys)
+        exc = MyException(str(e),sys)
 
     msg = str(exc)
     assert "No such file or directory" in msg
