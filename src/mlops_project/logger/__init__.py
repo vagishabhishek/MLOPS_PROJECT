@@ -3,37 +3,35 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from datetime import datetime
-
+from mlops_project.utils.env_loader import load_all_envs
+import os
+from from_root import from_root
 #------------------------------------------------------------------------------
 #LOAD ENV FILES
 #------------------------------------------------------------------------------
-import os
-...
-# DEVELOPMENT ONLY: auto-load environment variables
+# Auto-load .env during development
+# if os.getenv("ENV", "DEV") == "DEV":
+#     try:
+#         load_all_envs()
+#     except Exception as e:
+#         print("ENV LOADING ERROR:", e)
+
 if os.getenv("AUTO_LOAD_DOTENV", "0") == "1":
     try:
-        from dotenv import load_dotenv
-        load_dotenv()  # loads .env from project root
-    except Exception:
-        pass
+        load_all_envs()
+        print("[ENV LOADER] sucessfully loaded all environment variables.")
+    except Exception as e:
+        raise
+
+
 #-----------------------------------------------------------------------------------
-
-# from_root import
-try:
-    from from_root import from_root
-except ImportError:
-    from_root = lambda: Path(__file__).parent  # fallback to script folder
-
 # ---------------------- CONFIG ----------------------
 LOG_DIR_NAME = "logs"
 MAX_LOG_SIZE = 5 * 1024 * 1024  # 5 MB
 BACKUP_COUNT = 3
 
 # ---------------------- PATH SETUP ----------------------
-try:
-    root_path = Path(from_root())
-except Exception:
-    root_path = Path(__file__).parent
+root_path = from_root()
 
 LOG_DIR = root_path / LOG_DIR_NAME
 LOG_DIR.mkdir(parents=True, exist_ok=True)

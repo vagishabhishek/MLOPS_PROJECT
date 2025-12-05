@@ -1,7 +1,9 @@
+from mlops_project.pipeline.training_pipeline import TrainPipeline
+
 from mlops_project.logger import get_logger
 
-def demo_logger():
-    logger =get_logger("Demo Logger")
-    logger.info("Logging works perfectly.")
+import logging
+logging.getLogger("pymongo").setLevel(logging.CRITICAL)
 
-demo_logger()
+pipeline = TrainPipeline()
+pipeline.run_pipeline()

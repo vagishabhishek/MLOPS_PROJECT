@@ -31,5 +31,6 @@ def load_all_envs(env_dir:str | Path = ".env"):
         print(f"[ENV LOADER] Loaded:{env_file}")
 
 
+
         
     
